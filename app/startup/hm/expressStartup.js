@@ -2,7 +2,6 @@
 
 const express = require('express');
 const cors = require('cors');
-const replace = require('replace-in-file');
 
 const routes = require('../../routes');
 const routeUtils = require('../../utils/routeUtils');
