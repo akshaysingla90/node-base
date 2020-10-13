@@ -163,10 +163,11 @@ commonFunctions.createResetPasswordLink = (userData) => {
 /**
  * function to create reset password link.
  */
-commonFunctions.createAccountRestoreLink = (userData) => {
-  let dataForJWT = { previousAccountId: userData._id, Date: Date.now, email: userData.email, newAccountId: userData.newAccountId };
-  let accountRestoreLink = CONFIG.SERVER_URL + '/v1/user/restore/' + commonFunctions.encryptJwt(dataForJWT);
-  return accountRestoreLink;
+commonFunctions.createResetPasswordLink = (userData) => {
+  let dataForJWT = { _id: userData._id, Date: Date.now, email: userData.email };
+  let resetPasswordToken = commonFunctions.encryptJwt(dataForJWT);
+  let resetPasswordLink = CONFIG.UI_PATHS.BASE_PATH + CONFIG.UI_PATHS.RESET_PASSWORD_PATH + resetPasswordToken;
+  return { resetPasswordLink, resetPasswordToken };
 };
 
 /**

@@ -9,14 +9,12 @@ const Schema = MONGOOSE.Schema;
  ************* User Model or collection ***********
  **************************************************/
 const userSchema = new Schema({
-    firstName: { type: String },
-    lastName: { type: String },
-    userName: { type: String },
-    contactNumber: { type: String },
+    userName: { type: String },       
     email: { type: String },
     password: { type: String },
     isDeleted: { type: Boolean, default: false },
-    role: { type: Number, enum: [USER_ROLE.ADMIN, USER_ROLE.USER] }
+    role: { type: Number, enum: [USER_ROLE.ADMIN, USER_ROLE.USER] },
+    resetPasswordToken: String
 });
 
 userSchema.set('timestamps', true);

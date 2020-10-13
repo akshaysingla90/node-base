@@ -31,7 +31,10 @@ module.exports = {
     FCM: {
         API_KEY: 'FCM_API_KEY'
     },
-
+    UI_PATHS: {
+        BASE_PATH: process.env.CLIENT_APP_BASE_URL || 'http://localhost:4200',
+        RESET_PASSWORD_PATH: process.env.CLIENT_APP_RESET_PASSWORD_PATH || '/reset-password/',
+    },
     ENV_STAGING: "staging",
     ENV_DEVELOPMENT: "development",
     ENV_PRODUCTION: "production",

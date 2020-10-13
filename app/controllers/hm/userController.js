@@ -2,7 +2,7 @@
 const HELPERS = require("../../helpers");
 const { MESSAGES, ERROR_TYPES, NORMAL_PROJECTION, OPERATION_TYPES, SOCKET_EVENTS, SOCKET_EVENTS_TYPES } = require('../../utils/constants');
 const SERVICES = require('../../services');
-const { compareHash, encryptJwt, createResetPasswordLink, createAccountRestoreLink, sendEmail } = require(`../../utils/utils`);
+const { compareHash, encryptJwt, createResetPasswordLink, sendEmail, decryptJwt, hashPassword } = require(`../../utils/utils`);
 
 /**************************************************
  ***** Auth controller for authentication logic ***
@@ -39,13 +39,51 @@ userController.loginUser = async (payload) => {
     // compare user's password.
     if (compareHash(payload.password, user.password)) {
       const dataForJwt = { id: user._id, date: Date.now() };
-      return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.LOGGED_IN_SUCCESSFULLY), { token: encryptJwt(dataForJwt) });
+      delete user.password;
+      return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.LOGGED_IN_SUCCESSFULLY), { token: encryptJwt(dataForJwt), user });
     }
     throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INVALID_PASSWORD, ERROR_TYPES.BAD_REQUEST);
   }
   throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INVALID_EMAIL, ERROR_TYPES.BAD_REQUEST);
 };
 
+
+/**
+ * funciton to send a link to registered email of an user who forgots his password.
+ */
+userController.forgotPassword = async (payload) => {
+  let requiredUser = await SERVICES.userService.getUser({ email: payload.email }, { _id: 1, email: 1 });
+  if (requiredUser) {
+    // create reset-password link.
+    let { resetPasswordLink, resetPasswordToken } = createResetPasswordLink(requiredUser);
+    let updatedUser = await SERVICES.userService.updateUser({ _id: requiredUser._id }, { resetPasswordToken });
+    // send forgot-password email to user.
+    let data = { email: updatedUser.email, resetPasswordLink }
+    console.log(data);
+    // await sendEmail(data, EMAIL_TYPES.FORGOT_PASSWORD_EMAIL);
+    return HELPERS.responseHelper.createSuccessResponse(MESSAGES.EMAIL_SENT_TO_REGISTERED_EMAIL_WITH_RESET_PASSWORD_LINK);
+  }
+  throw HELPERS.responseHelper.createErrorResponse(MESSAGES.NO_USER_FOUND, ERROR_TYPES.BAD_REQUEST);
+};
+
+/**
+ * verify otp for phone verification and forgot password
+ * @param {object} requiredUser
+ * @param {string} otp
+ * @returns
+ */
+userController.resetPassword = async (payload) => {
+
+  let { email } = decryptJwt(payload.token);
+  let requiredUser = await SERVICES.userService.getUser({ email }, { resetPasswordToken: 1 });
+  console.log(requiredUser.resetPasswordToken);
+  if (requiredUser && (payload.token == requiredUser.resetPasswordToken) /*&&  (new Date() > new Date(expiresAt))*/) {
+    await SERVICES.userService.updateUser({ email }, { $unset: { resetPasswordToken: 1 }, password: hashPassword(payload.password) });
+    return HELPERS.responseHelper.createSuccessResponse(MESSAGES.PASSWORD_RESET_SUCCESSFULLY);
+  }
+  throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INVALID_CREDENTIALS, ERROR_TYPES.BAD_REQUEST);
+
+}
 
 /**
  * function to create and update user based on the operation type. 
