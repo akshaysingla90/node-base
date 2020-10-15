@@ -26,6 +26,8 @@ userController.registerNewUser = async (payload) => {
   if (!!isUserAlreadyExists) throw HELPERS.responseHelper.createErrorResponse(MESSAGES.EMAIL_ALREADY_EXISTS, ERROR_TYPES.BAD_REQUEST);
   let newRegisteredUser = (await SERVICES.userService.createUser(payload))._doc;
   delete newRegisteredUser.password;
+  const dataForJwt = { id: newRegisteredUser._id, date: Date.now() };
+  newRegisteredUser.token = encryptJwt(dataForJwt);
   return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.USER_REGISTERED_SUCCESSFULLY), { user: newRegisteredUser });
 };
 
@@ -40,7 +42,8 @@ userController.loginUser = async (payload) => {
     if (compareHash(payload.password, user.password)) {
       const dataForJwt = { id: user._id, date: Date.now() };
       delete user.password;
-      return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.LOGGED_IN_SUCCESSFULLY), { token: encryptJwt(dataForJwt), user });
+      user.token = encryptJwt(dataForJwt);
+      return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.LOGGED_IN_SUCCESSFULLY), { user });
     }
     throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INVALID_PASSWORD, ERROR_TYPES.BAD_REQUEST);
   }
