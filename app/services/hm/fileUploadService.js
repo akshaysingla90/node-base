@@ -4,7 +4,7 @@ const fse = require('fs-extra');
 const path = require('path');
 const CONFIG = require('../../../config');
 const fileUploadService = {};
-AWS.config.update({ accessKeyId: CONFIG.s3Bucket.accessKeyId, secretAccessKey: CONFIG.s3Bucket.secretAccessKey });
+AWS.config.update({ accessKeyId: CONFIG.AWS.accessKeyId, secretAccessKey: CONFIG.AWS.secretAccessKey });
 let s3Bucket = new AWS.S3();
 const { AVAILABLE_EXTENSIONS_FOR_FILE_UPLOADS, SERVER, MESSAGES, ERROR_TYPES } = require(`../../utils/constants`);
 const HELPERS = require("../../helpers");
@@ -15,7 +15,7 @@ const HELPERS = require("../../helpers");
 fileUploadService.uploadFileToS3 = (payload, fileName, bucketName) => {
     return new Promise((resolve, reject) => {
         s3Bucket.upload({
-            Bucket: bucketName || CONFIG.s3Bucket.bucketName,
+            Bucket: bucketName || CONFIG.AWS.bucketName,
             Key: fileName,
             Body: payload.file.buffer,
             ACL: 'public-read',

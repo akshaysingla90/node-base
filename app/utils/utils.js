@@ -2,7 +2,14 @@ let CONSTANTS = require('./constants');
 const MONGOOSE = require('mongoose');
 const BCRYPT = require("bcrypt");
 const JWT = require("jsonwebtoken");
+const HANDLEBARS = require('handlebars');
+
 const CONFIG = require('../../config');
+
+const AWS = require('aws-sdk');
+AWS.config.update({ accessKeyId: CONFIG.AWS.accessKeyId, secretAccessKey: CONFIG.AWS.secretAccessKey , region: CONFIG.AWS.region});
+var ses = new AWS.SES();
+
 
 let commonFunctions = {};
 
@@ -99,56 +106,68 @@ commonFunctions.removeUndefinedKeysFromPayload = (payload = {}) => {
   }
 };
 
-/**
- * Send an email to perticular user mail 
- * @param {*} email email address
- * @param {*} subject  subject
- * @param {*} content content
- * @param {*} cb callback
- */
-commonFunctions.sendEmail = async (userData, type) => {
-  const transporter = require('nodemailer').createTransport(CONFIG.SMTP.TRANSPORT);
-  const handleBars = require('handlebars');
-  /** setup email data with unicode symbols **/
-  const mailData = commonFunctions.emailTypes(userData, type), email = userData.email;
-  let template = handleBars.compile(mailData.template);
+// /**
+//  * Send an email to perticular user mail 
+//  * @param {*} email email address
+//  * @param {*} subject  subject
+//  * @param {*} content content
+//  * @param {*} cb callback
+//  */
+// commonFunctions.sendEmail = async (userData, type) => {
+//   const transporter = require('nodemailer').createTransport(CONFIG.SMTP.TRANSPORT);
+//   /** setup email data with unicode symbols **/
+//   const mailData = commonFunctions.emailTypes(userData, type), email = userData.email;
+//   let template = handleBars.compile(mailData.template);
 
-  let result = template(mailData.data);
+//   let result = template(mailData.data);
 
-  let emailToSend = {
-    to: email,
-    from: CONFIG.SMTP.SENDER,
-    subject: mailData.Subject,
-    html: result
-  }
-  return await transporter.sendMail(emailToSend);
-};
+//   let emailToSend = {
+//     to: email,
+//     from: CONFIG.SMTP.SENDER,
+//     subject: mailData.Subject,
+//     html: result
+//   }
+//   return await transporter.sendMail(emailToSend);
+// };
 
 
 commonFunctions.emailTypes = (user, type) => {
-  let EmailStatus = {
+  let EmailData = {
     Subject: '',
     data: {},
     template: ''
   };
   switch (type) {
-
-    case CONSTANTS.EMAIL_TYPES.ACCOUNT_RESTORATION_EMAIL:
-      EmailStatus['Subject'] = CONSTANTS.EMAIL_SUBJECTS.ACCOUNT_RESTORATION_EMAIL;
-      EmailStatus.template = CONSTANTS.EMAIL_CONTENTS.ACCOUNT_RESTORATION_EMAIL;
-      EmailStatus.data['name'] = user.name;
-      EmailStatus.data['confirmationLink'] = user.confirmationLink;
+    case CONSTANTS.EMAIL_TYPES.FORGOT_PASSWORD_EMAIL:
+      EmailData['Subject'] = CONSTANTS.EMAIL_SUBJECTS.FORGOT_PASSWORD_EMAIL;
+      EmailData.template = CONSTANTS.EMAIL_CONTENTS.FORGOT_PASSWORD_EMAIL;
+      EmailData.data['token'] = user.token;
       break;
-
+    case CONSTANTS.EMAIL_TYPES.EMAIL_VERIFICATION_EMAIL:
+      EmailData['Subject'] = CONSTANTS.EMAIL_SUBJECTS.EMAIL_VERIFICATION_EMAIL;
+      EmailData.template = CONSTANTS.EMAIL_CONTENTS.EMAIL_VERIFICATION_EMAIL;
+      EmailData.data['token'] = user.token;
+      break;
+    case CONSTANTS.EMAIL_TYPES.LOGIN_VERIFICATION_EMAIL:
+      EmailData['Subject'] = CONSTANTS.EMAIL_SUBJECTS.LOGIN_VERIFICATION_EMAIL;
+      EmailData.template = CONSTANTS.EMAIL_CONTENTS.LOGIN_VERIFICATION_EMAIL;
+      EmailData.data['token'] = user.token;
+      break;
+    case CONSTANTS.EMAIL_TYPES.ACCOUNT_RESTORATION_EMAIL:
+      EmailData['Subject'] = CONSTANTS.EMAIL_SUBJECTS.ACCOUNT_RESTORATION_EMAIL;
+      EmailData.template = CONSTANTS.EMAIL_CONTENTS.ACCOUNT_RESTORATION_EMAIL;
+      EmailData.data['name'] = user.userName;
+      EmailData.data['confirmationLink'] = user.confirmationLink;
+      break;
     default:
-      EmailStatus['Subject'] = 'Welcome Email!';
+      EmailData['Subject'] = 'Welcome Email!';
       break;
   }
-  return EmailStatus;
+  return EmailData;
 };
 
 commonFunctions.renderTemplate = (template, data) => {
-  return handlebars.compile(template)(data);
+  return HANDLEBARS.compile(template)(data);
 };
 
 /**
@@ -179,5 +198,54 @@ commonFunctions.generateAlphanumericString = (length) => {
   for (var i = length; i > 0; --i) randomString += chracters[Math.floor(Math.random() * chracters.length)];
   return randomString;
 };
+ 
+/**
+ * function to generate random otp
+ */
+commonFunctions.generateOtp = (length) => {
+  let chracters = '0123456789';
+  var randomString = '';
+  for (var i = length; i > 0; --i) randomString += chracters[Math.floor(Math.random() * chracters.length)];
+  return randomString;
+};
+
+/**
+ * Send an email to perticular user mail 
+ * @param {*} email email address
+ * @param {*} subject  subject
+ * @param {*} content content
+ * @param {*} cb callback
+ */
+commonFunctions.sendEmail = async (userData, type) => {
+  const mailData = commonFunctions.emailTypes(userData, type), email = userData.email;
+  let template = HANDLEBARS.compile(mailData.template);
+  let result = template(mailData.data);
+  var params = {
+    Destination: { ToAddresses: [email] },
+    Message: {
+      Body: {
+        Html: {
+          Data: result,
+          Charset: "UTF-8"
+        },
+        Text: {
+          Data: 'Hello demo',
+          Charset: "UTF-8",
+        }
+      },
+      Subject: { Data: mailData.Subject }
+    },
+    Source: CONFIG.AWS.senderEmail,
+  };
+
+  ses.sendEmail(params).promise()
+    .then(data => {
+      console.log("email submitted to SES", data);
+    })
+    .catch(error => {
+      console.log(error);
+    });
+};
+
 module.exports = commonFunctions;
 

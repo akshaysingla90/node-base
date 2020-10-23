@@ -1,15 +1,23 @@
 const path = require('path');
 const PLATFORM = process.env.PLATFORM || 'humble-minor'
+
 module.exports = {
     PLATFORM,
     root: path.normalize(__dirname + '/../app'),
     theme: PLATFORM + '/us',
     mongoUri: 'mongodb://localhost:27017/humble-minor',
     adminEmail: 'admin@admin.com',
-    host: 'helendomain.com',
+    host: 'humbleminor.com',
     SENDGRID_API_KEY: 'CHANGEME',
     show: function () {
         console.log('environment: ' + this.environment);
+    },
+    AWS: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'access-key-id',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'secret-access-key',
+        bucketName: process.env.S3_BUCKET_NAME || 'bucket-name',
+        senderEmail: process.env.EMAIL_SENDER || 'noreply.humble.minor@yopmail.com',
+        region: process.env.AWS_REGION || 'ohio'
     },
     SENDINBLUE: {
         API_KEY: 'dummy',
@@ -63,11 +71,6 @@ module.exports = {
     PATH_FOR_LOCAL: process.env.PATH_FOR_LOCAL || '/uploads/',
     SERVER_URL: process.env.SERVER_URL || 'http://localhost:5000',
     swagger: require('./swagger'),
-    s3Bucket: {
-        accessKeyId: process.env.ACCESS_KEY_ID || 'access-key-id',
-        secretAccessKey: process.env.SECRET_ACCESS_KEY || 'secret-access-key',
-        bucketName: process.env.S3_BUCKET_NAME || 'bucket-name'
-    },
     REDIS: {
         PORT: process.env.REDIS_PORT || '6379',
         HOST: process.env.REDIS_HOST || '127.0.0.1'

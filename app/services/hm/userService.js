@@ -13,7 +13,8 @@ userService.createUser = async (user) => {
 /**
  * function to fetch user from the system based on criteria.
  */
-userService.getUser = async (criteria, projection) => {
+userService.getUser = async (criteria, projection, options) => {
+  if (options && options.instance) return await userModel.findOne(criteria, projection);
   return await userModel.findOne(criteria, projection).lean();
 };
 
@@ -21,7 +22,7 @@ userService.getUser = async (criteria, projection) => {
  * function to update user. 
  */
 userService.updateUser = async (criteria = {}, dataToUpdate = {}, options = {}) => {
-  return await userModel.findOneAndUpdate(criteria, dataToUpdate, options).lean();
+  return await userModel.findOneAndUpdate(criteria, dataToUpdate, { ...options, useFindAndModify:true}).lean();
 };
 
 module.exports = userService;

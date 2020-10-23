@@ -6,6 +6,8 @@ module.exports = {
   FORBIDDEN: 'Forbidden! You don’t have permission to access this resource',
   LOGGED_IN_SUCCESSFULLY: 'Logged in successfully.',
   EMAIL_ALREADY_EXISTS: 'Email already exists.',
+  VERIFICATION_SENT_TO_YOUR_EMAIL: 'OTP to verify account has been sent to your email address.',
+  EMAI_VERIFIED:'Email verified successfully',
   INVALID_EMAIL: 'Invalid email address.',
   INVALID_PASSWORD: 'Invalid password.',
   NOT_FOUND: 'Not found.',

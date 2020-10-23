@@ -21,9 +21,12 @@ let routes = [
 		path: '/v1/user/register',
 		joiSchemaForSwagger: {
 			body: {
-				email: Joi.string().email().optional().description('User\'s email.'),
-				password: Joi.string().optional().description('User\'s password.'),
+				email: Joi.string().email().required().description('User\'s email.'),
+				password: Joi.string().description('User\'s password.')
+					.when('token', { is: Joi.exist(), then: Joi.string().required(), otherwise: Joi.forbidden() }),
 				userName: Joi.string().optional().description('User\'s user name.')
+					.when('token', { is: Joi.exist(), then: Joi.forbidden(), otherwise: Joi.string().required() }),
+				token: Joi.string().optional().description('email-verfication token.')
 			},
 			group: 'User',
 			description: 'Route to registere a user.',
@@ -56,7 +59,8 @@ let routes = [
 		joiSchemaForSwagger: {
 			body: {
 				email: Joi.string().email().required().description('User\'s email Id.'),
-				password: Joi.string().required().description('User\'s password.')
+				password: Joi.string().required().description('User\'s password.'),
+				token: Joi.string().optional().description('login token.')
 			},
 			group: 'User',
 			description: 'Route to login a user.',

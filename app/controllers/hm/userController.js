@@ -1,8 +1,8 @@
 "use strict";
 const HELPERS = require("../../helpers");
-const { MESSAGES, ERROR_TYPES, NORMAL_PROJECTION, OPERATION_TYPES, SOCKET_EVENTS, SOCKET_EVENTS_TYPES } = require('../../utils/constants');
+const { MESSAGES, ERROR_TYPES, NORMAL_PROJECTION, OPERATION_TYPES, EMAIL_TYPES, OTP_LENGTH } = require('../../utils/constants');
 const SERVICES = require('../../services');
-const { compareHash, encryptJwt, createResetPasswordLink, sendEmail, decryptJwt, hashPassword } = require(`../../utils/utils`);
+const { compareHash, encryptJwt, createResetPasswordLink, sendEmail, decryptJwt, hashPassword, generateOtp } = require(`../../utils/utils`);
 
 /**************************************************
  ***** Auth controller for authentication logic ***
@@ -22,14 +22,30 @@ userController.getServerResponse = async (payload) => {
  * function to register a user to the system.
  */
 userController.registerNewUser = async (payload) => {
-  let isUserAlreadyExists = await SERVICES.userService.getUser({ email: payload.email }, { _id: 1 });
-  if (!!isUserAlreadyExists) throw HELPERS.responseHelper.createErrorResponse(MESSAGES.EMAIL_ALREADY_EXISTS, ERROR_TYPES.BAD_REQUEST);
-  let newRegisteredUser = (await SERVICES.userService.createUser(payload))._doc;
-  delete newRegisteredUser.password;
-  const dataForJwt = { id: newRegisteredUser._id, date: Date.now() };
-  newRegisteredUser.token = encryptJwt(dataForJwt);
-  return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.USER_REGISTERED_SUCCESSFULLY), { user: newRegisteredUser });
+  let user = await SERVICES.userService.getUser({ email: payload.email }, { _id: 1, isVerified: 1, verficationToken:1 }, { instance: true });
+  if (!!user && user.isVerified) throw HELPERS.responseHelper.createErrorResponse(MESSAGES.EMAIL_ALREADY_EXISTS, ERROR_TYPES.BAD_REQUEST);
+  if (!!user && payload.token ) {
+    if (payload.token != user.verficationToken) throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INVALID_CREDENTIALS, ERROR_TYPES.BAD_REQUEST);
+    user.password = payload.password;
+    user.isVerified=true;
+    await user.save();
+    delete user.password;
+    const dataForJwt = { id: user._id, date: Date.now() };
+    user.token = encryptJwt(dataForJwt);
+    return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.EMAI_VERIFIED), { user });
+  }
+  let verficationToken = generateOtp(OTP_LENGTH);
+  if (!user) {
+    payload.verficationToken = verficationToken;
+    user = (await SERVICES.userService.createUser(payload))._doc;
+  } else {
+    user.verficationToken = verficationToken;
+    await user.save();
+  }
+  // sendEmail(verficationToken);
+  return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.VERIFICATION_SENT_TO_YOUR_EMAIL));
 };
+
 
 /**
  * function to login a user to the system.
@@ -40,10 +56,18 @@ userController.loginUser = async (payload) => {
   if (user) {
     // compare user's password.
     if (compareHash(payload.password, user.password)) {
-      const dataForJwt = { id: user._id, date: Date.now() };
-      delete user.password;
-      user.token = encryptJwt(dataForJwt);
-      return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.LOGGED_IN_SUCCESSFULLY), { user });
+      if (payload.token ) {
+        if (payload.token != user.token) throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INVALID_CREDENTIALS, ERROR_TYPES.BAD_REQUEST);
+        const dataForJwt = { id: user._id, date: Date.now() };
+        delete user.password;
+        user.token = encryptJwt(dataForJwt);
+        return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.LOGGED_IN_SUCCESSFULLY), { user });
+      }
+      let loginToken = generateOtp(OTP_LENGTH);
+      user.loginToken = loginToken;
+      await user.save();
+      // sendEmail(loginToken);
+      return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.VERIFICATION_SENT_TO_YOUR_EMAIL));
     }
     throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INVALID_PASSWORD, ERROR_TYPES.BAD_REQUEST);
   }
@@ -58,12 +82,12 @@ userController.forgotPassword = async (payload) => {
   let requiredUser = await SERVICES.userService.getUser({ email: payload.email }, { _id: 1, email: 1 });
   if (requiredUser) {
     // create reset-password link.
-    let { resetPasswordLink, resetPasswordToken } = createResetPasswordLink(requiredUser);
+    let resetPasswordToken = generateOtp(OTP_LENGTH);
     let updatedUser = await SERVICES.userService.updateUser({ _id: requiredUser._id }, { resetPasswordToken });
     // send forgot-password email to user.
-    let data = { email: updatedUser.email, resetPasswordLink }
+    let data = { email: updatedUser.email, token: resetPasswordToken }
     console.log(data);
-    // await sendEmail(data, EMAIL_TYPES.FORGOT_PASSWORD_EMAIL);
+    await sendEmail(data, EMAIL_TYPES.FORGOT_PASSWORD_EMAIL);
     return HELPERS.responseHelper.createSuccessResponse(MESSAGES.EMAIL_SENT_TO_REGISTERED_EMAIL_WITH_RESET_PASSWORD_LINK);
   }
   throw HELPERS.responseHelper.createErrorResponse(MESSAGES.NO_USER_FOUND, ERROR_TYPES.BAD_REQUEST);
@@ -76,16 +100,12 @@ userController.forgotPassword = async (payload) => {
  * @returns
  */
 userController.resetPassword = async (payload) => {
-
-  let { email } = decryptJwt(payload.token);
-  let requiredUser = await SERVICES.userService.getUser({ email }, { resetPasswordToken: 1 });
-  console.log(requiredUser.resetPasswordToken);
+  let requiredUser = await SERVICES.userService.getUser({ email:payload.email }, { resetPasswordToken: 1 });
   if (requiredUser && (payload.token == requiredUser.resetPasswordToken) /*&&  (new Date() > new Date(expiresAt))*/) {
     await SERVICES.userService.updateUser({ email }, { $unset: { resetPasswordToken: 1 }, password: hashPassword(payload.password) });
     return HELPERS.responseHelper.createSuccessResponse(MESSAGES.PASSWORD_RESET_SUCCESSFULLY);
   }
   throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INVALID_CREDENTIALS, ERROR_TYPES.BAD_REQUEST);
-
 }
 
 /**

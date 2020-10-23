@@ -61,16 +61,28 @@ CONSTANTS.LOGIN_TYPES = {
 };
 
 CONSTANTS.EMAIL_TYPES = {
-  ACCOUNT_RESTORATION_EMAIL: 1
+  ACCOUNT_RESTORATION_EMAIL: 1,
+  FORGOT_PASSWORD_EMAIL: 2,
+  EMAIL_VERIFICATION_EMAIL:3,
+  LOGIN_VERIFICATION_EMAIL:4
 };
 
 CONSTANTS.EMAIL_SUBJECTS = {
-  ACCOUNT_RESTORATION_EMAIL: 'Account restoration email'
+  ACCOUNT_RESTORATION_EMAIL: 'Account restoration email',
+  FORGOT_PASSWORD_EMAIL: 'Reset your Password: ',
+  EMAIL_VERIFICATION_EMAIL:'Verify your Email: ',
+  LOGIN_VERIFICATION_EMAIL:'Verify your device'
 };
 
 CONSTANTS.EMAIL_CONTENTS = {
   ACCOUNT_RESTORATION_EMAIL: `<p>Hello<span style="color: #3366ff;"> <strong>{{name}}</strong></span>,</p><p>Restore your account by clicking on the link<span style="color: #3366ff;"><strong></p><a href={{confirmationLink}} target="_blank">Confirm here</a><p>Regards,<br>
-  Team HM</p>`
+  Team Humble Minor</p>`,
+  FORGOT_PASSWORD_EMAIL: `<p>Hello<span style="color: #3366ff;"> <strong>{{name}}</strong></span>,</p><p>Reset your password for your account using this token :{{token}}<span style="color: #3366ff;"><strong></p><p>Regards,<br>
+  Team </p>`,
+  EMAIL_VERIFICATION_EMAIL: `<p>Hello<span style="color: #3366ff;"> <strong>{{name}}</strong></span>,</p><p>Kindly verify your email using this token :{{token}}<span style="color: #3366ff;"><strong></p><p>Regards,<br>
+  Team </p>`,
+  LOGIN_VERIFICATION_EMAIL: `<p>Hello<span style="color: #3366ff;"> <strong>{{name}}</strong></span>,</p><p> To complete the sign in, enter the verification code :{{token}}<span style="color: #3366ff;"><strong></p><p>Regards,<br>
+  Team </p>`,
 };
 
 CONSTANTS.SOCKET_EVENTS = {
@@ -164,5 +176,7 @@ CONSTANTS.USER_TYPES = {
   TEACHER: 1,
   STUDENT: 2
 };
+
+CONSTANTS.OTP_LENGTH = 4;
 
 module.exports = CONSTANTS;
