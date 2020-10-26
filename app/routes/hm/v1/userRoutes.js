@@ -86,6 +86,7 @@ let routes = [
 		path: '/v1/user/reset-password',
 		joiSchemaForSwagger: {
 			body: {
+				email: Joi.string().email().required().description('User\'s email Id.'),
 				password: Joi.string().required().description('New password.'),
 				token: Joi.string().required().description('Reset-password token.')
 			},
