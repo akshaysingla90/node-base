@@ -22,7 +22,7 @@ userController.getServerResponse = async (payload) => {
  * function to register a user to the system.
  */
 userController.registerNewUser = async (payload) => {
-  let user = await SERVICES.userService.getUser({ email: payload.email }, { _id: 1, isVerified: 1, verficationToken: 1 }, { instance: true });
+  let user = await SERVICES.userService.getUser({ email: payload.email }, { _id: 1,email:1, isVerified: 1, verficationToken: 1 }, { instance: true });
   if (!!user && user.isVerified) throw HELPERS.responseHelper.createErrorResponse(MESSAGES.EMAIL_ALREADY_EXISTS, ERROR_TYPES.BAD_REQUEST);
   if (!!user && payload.token) {
     if (payload.token != user.verficationToken) throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INCORRECT_TOKEN, ERROR_TYPES.BAD_REQUEST);
