@@ -52,7 +52,7 @@ userController.registerNewUser = async (payload) => {
  */
 userController.loginUser = async (payload) => {
   // check is user exists in the database with provided email or not.
-  let user = await SERVICES.userService.getUser({ email: payload.email }, NORMAL_PROJECTION);
+  let user = await SERVICES.userService.getUser({ email: payload.email }, NORMAL_PROJECTION, { instance:true });
   if (user) {
     // compare user's password.
     if (compareHash(payload.password, user.password)) {
