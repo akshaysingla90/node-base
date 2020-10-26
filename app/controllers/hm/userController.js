@@ -108,7 +108,7 @@ userController.forgotPassword = async (payload) => {
 userController.resetPassword = async (payload) => {
   let requiredUser = await SERVICES.userService.getUser({ email: payload.email }, { resetPasswordToken: 1 });
   if (requiredUser && (payload.token == requiredUser.resetPasswordToken) /*&&  (new Date() > new Date(expiresAt))*/) {
-    await SERVICES.userService.updateUser({ email }, { $unset: { resetPasswordToken: 1 }, password: hashPassword(payload.password) });
+    await SERVICES.userService.updateUser({ email: payload.email }, { $unset: { resetPasswordToken: 1 }, password: hashPassword(payload.password) });
     return HELPERS.responseHelper.createSuccessResponse(MESSAGES.PASSWORD_RESET_SUCCESSFULLY);
   }
   throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INVALID_CREDENTIALS, ERROR_TYPES.BAD_REQUEST);
