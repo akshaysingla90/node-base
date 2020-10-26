@@ -28,6 +28,7 @@ module.exports = {
   REGISTRATION_SUCCESSFULLY: 'Registration successfully.',
   EMAIL_SENT_TO_REGISTERED_EMAIL_WITH_RESET_PASSWORD_LINK: 'Reset password link is sent to the email',
   INVALID_CREDENTIALS: 'Invalid Credentials!',
+  INCORRECT_TOKEN:'Incorrect Token!',
   PASSWORD_RESET_SUCCESSFULLY: 'Password Changed!'
 
 };

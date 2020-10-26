@@ -23,11 +23,11 @@ const userSchema = new Schema({
 
 userSchema.set('timestamps', true);
 
-// pre-hook to encrypt user's password and store it in the database.
-userSchema.pre('save', async function (next) {
-    if(this.password) this.password = hashPassword(this.password);
-    next();
-});
+// // pre-hook to encrypt user's password and store it in the database.
+// userSchema.pre('save', async function (next) {
+//     if(this.password) this.password = hashPassword(this.password);
+//     next();
+// });
 
 module.exports = MONGOOSE.model('user', userSchema);
 

@@ -22,17 +22,17 @@ userController.getServerResponse = async (payload) => {
  * function to register a user to the system.
  */
 userController.registerNewUser = async (payload) => {
-  let user = await SERVICES.userService.getUser({ email: payload.email }, { _id: 1, isVerified: 1, verficationToken:1 }, { instance: true });
+  let user = await SERVICES.userService.getUser({ email: payload.email }, { _id: 1, isVerified: 1, verficationToken: 1 }, { instance: true });
   if (!!user && user.isVerified) throw HELPERS.responseHelper.createErrorResponse(MESSAGES.EMAIL_ALREADY_EXISTS, ERROR_TYPES.BAD_REQUEST);
-  if (!!user && payload.token ) {
-    if (payload.token != user.verficationToken) throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INVALID_CREDENTIALS, ERROR_TYPES.BAD_REQUEST);
-    user.password = payload.password;
-    user.isVerified=true;
+  if (!!user && payload.token) {
+    if (payload.token != user.verficationToken) throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INCORRECT_TOKEN, ERROR_TYPES.BAD_REQUEST);
+    user.password = hashPassword(payload.password);
+    user.isVerified = true;
     await user.save();
-    delete user.password;
+    delete user._doc.password;
     const dataForJwt = { id: user._id, date: Date.now() };
-    user.token = encryptJwt(dataForJwt);
-    return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.EMAI_VERIFIED), { user });
+    user._doc.token = encryptJwt(dataForJwt);
+    return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.EMAI_VERIFIED), { user: user._doc });
   }
   let verficationToken = generateOtp(OTP_LENGTH);
   if (!user) {
@@ -42,7 +42,9 @@ userController.registerNewUser = async (payload) => {
     user.verficationToken = verficationToken;
     await user.save();
   }
-  // sendEmail(verficationToken);
+  let data = { email: user.email, token: verficationToken }
+  console.log(data);
+  await sendEmail(data, EMAIL_TYPES.EMAIL_VERIFICATION_EMAIL);
   return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.VERIFICATION_SENT_TO_YOUR_EMAIL));
 };
 
@@ -52,21 +54,25 @@ userController.registerNewUser = async (payload) => {
  */
 userController.loginUser = async (payload) => {
   // check is user exists in the database with provided email or not.
-  let user = await SERVICES.userService.getUser({ email: payload.email }, NORMAL_PROJECTION, { instance:true });
+  let user = await SERVICES.userService.getUser({ email: payload.email }, NORMAL_PROJECTION, { instance: true });
   if (user) {
     // compare user's password.
     if (compareHash(payload.password, user.password)) {
-      if (payload.token ) {
-        if (payload.token != user.token) throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INVALID_CREDENTIALS, ERROR_TYPES.BAD_REQUEST);
+      if (payload.token) {
+        if (payload.token != user.loginToken) throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INCORRECT_TOKEN, ERROR_TYPES.BAD_REQUEST);
         const dataForJwt = { id: user._id, date: Date.now() };
-        delete user.password;
-        user.token = encryptJwt(dataForJwt);
-        return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.LOGGED_IN_SUCCESSFULLY), { user });
+        delete user._doc.password;
+        delete user._doc.verficationToken;
+        delete user._doc.loginToken;
+        user._doc.token = encryptJwt(dataForJwt);
+        return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.LOGGED_IN_SUCCESSFULLY), { user: user._doc });
       }
       let loginToken = generateOtp(OTP_LENGTH);
       user.loginToken = loginToken;
       await user.save();
-      // sendEmail(loginToken);
+      let data = { email: user.email, token: loginToken }
+      console.log(data);
+      await sendEmail(data, EMAIL_TYPES.LOGIN_VERIFICATION_EMAIL);
       return Object.assign(HELPERS.responseHelper.createSuccessResponse(MESSAGES.VERIFICATION_SENT_TO_YOUR_EMAIL));
     }
     throw HELPERS.responseHelper.createErrorResponse(MESSAGES.INVALID_PASSWORD, ERROR_TYPES.BAD_REQUEST);
@@ -100,7 +106,7 @@ userController.forgotPassword = async (payload) => {
  * @returns
  */
 userController.resetPassword = async (payload) => {
-  let requiredUser = await SERVICES.userService.getUser({ email:payload.email }, { resetPasswordToken: 1 });
+  let requiredUser = await SERVICES.userService.getUser({ email: payload.email }, { resetPasswordToken: 1 });
   if (requiredUser && (payload.token == requiredUser.resetPasswordToken) /*&&  (new Date() > new Date(expiresAt))*/) {
     await SERVICES.userService.updateUser({ email }, { $unset: { resetPasswordToken: 1 }, password: hashPassword(payload.password) });
     return HELPERS.responseHelper.createSuccessResponse(MESSAGES.PASSWORD_RESET_SUCCESSFULLY);
